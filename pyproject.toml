@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "snapctl"
+version = "0.1.0"
+description = "Scripts to startup and control the SNAP board for GReX"
+authors = ["Kiran Shila <me@kiranshila.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+casperfpga = {git = "https://github.com/GReX-Telescope/casperfpga", branch = "py3-pcie-transport" }
+#casperfpga = { git = "https://github.com/casper-astro/casperfpga", rev = "7f8bb67c0e7d8c2dc49c66918857fd55a35a35e5"}
+typer = {extras = ["all"], version = "^0.6.1"}
+loguru = "^0.6.0"
+matplotlib = "^3.5.2"
+scipy = "^1.8.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+black = {version = "^22.6.0", allow-prereleases = true}
+ipython = "^8.4.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+snapctl = "snapctl.main:CLI"
