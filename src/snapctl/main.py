@@ -8,8 +8,6 @@ from casperfpga.snap import Snap
 from casperfpga.adc import HMCAD1511
 from loguru import logger
 from typing import Dict
-from scipy.fft import fft, fftfreq
-from scipy.signal import hamming
 from enum import Enum
 import numpy as np
 import matplotlib.pyplot as plt
@@ -217,63 +215,3 @@ def startup(
     setup_adcs(client, adc_name, sample_rate_mhz, channels)
     clk = client.estimate_fpga_clock()
     logger.success(f"Setup complete - FPGA clock at {clk} MHz")
-
-
-def byte_to_fix_8_7(byte: int) -> float:
-    if byte > 127:
-        return (256 - byte) * -1 / 2**7
-    else:
-        return byte / 2**7
-
-
-@CLI.command()
-def test_adc(ip: str):
-    client = CasperFpga(ip)
-    # Enable the snapshot block and trigger
-    chan_select(client, AdcChan.B, OutChan.A)
-    chan_select(client, AdcChan.A, OutChan.B)
-    pair_select(client, OutputPair._1_2)
-    client.write_int("adc_snap_ctrl", 0)
-    time.sleep(1)
-    client.write_int("adc_snap_ctrl", 3)
-    time.sleep(1)
-    # Read the bram data
-    snapshot_data = client.read("adc_snap_bram", 4096 * 4)
-    # Unpack the data
-    N = 8192
-    T = 1 / 500e6
-    pol_a = np.zeros(N)
-    pol_b = np.zeros(N)
-    for i in range(N // 2):
-        pol_a[2 * i + 0] = -1 * byte_to_fix_8_7(snapshot_data[4 * i + 3])
-        pol_a[2 * i + 1] = byte_to_fix_8_7(snapshot_data[4 * i + 2])
-        pol_b[2 * i + 0] = byte_to_fix_8_7(snapshot_data[4 * i + 1])
-        pol_b[2 * i + 1] = -1 * byte_to_fix_8_7(snapshot_data[4 * i + 0])
-    w = hamming(N)
-    yf_a = fft(pol_a * w)
-    yf_b = fft(pol_b * w)
-    xf = fftfreq(N, T)[: N // 2]
-    # Flip spectra because we're in the second nyquist zone
-    spectra_a = np.flip(2.0 / N * np.abs(yf_a[0 : N // 2]))
-    spectra_b = np.flip(2.0 / N * np.abs(yf_b[0 : N // 2]))
-    freqs = 500e6 - xf + 1030e6
-    plt.plot(freqs, 10 * np.log10(spectra_a))
-    plt.plot(freqs, 10 * np.log10(spectra_b))
-    # plt.plot(pol_a)
-    # plt.plot(pol_b)
-    plt.grid()
-    plt.show()
-
-
-@CLI.command()
-def test_spec(ip: str):
-    client = CasperFpga(ip)
-    chan_select(client, AdcChan.A, OutChan.A)
-    chan_select(client, AdcChan.B, OutChan.B)
-    pair_select(client, OutputPair._1_2)
-    client.write_int("fft_shift", 4095)
-    set_requant_gain(client, 500)
-    # time.sleep(1)
-    # pol_a_spec = struct.unpack(">2048l", client.read("pol_a_spec", 2048 * 4))
-    # plt.plot(pol_a_spec)
-    # plt.show()
