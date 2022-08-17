@@ -11,13 +11,51 @@ from typing import Dict
 from enum import Enum
 import numpy as np
 import matplotlib.pyplot as plt
-import typer
 import logging
 import time
 import sys
 import struct
+import argparse
 
-CLI = typer.Typer()
+parser = argparse.ArgumentParser(
+    prog="snapctl", description="SNAP bringup routines for GReX", add_help=True
+)
+
+parser.add_argument("filename", help="The FPG file to program")
+parser.add_argument("ip", help="The IP address of the Pi (or proxy)")
+parser.add_argument(
+    "--upload_port", help="The katcp FPG upload_port", type=int, default=3000
+)
+parser.add_argument(
+    "--core_ip", help="IP address of the 10 GbE Core", default="192.168.5.20"
+)
+parser.add_argument(
+    "--core_port", help="Port of the 10 GbE Core", default=60000, type=int
+)
+parser.add_argument(
+    "--dest_ip", help="IP address of the UDP payload destination", default="192.168.5.1"
+)
+parser.add_argument(
+    "--dest_port", help="Port of the UDP payload destination", default=60000, type=int
+)
+parser.add_argument(
+    "--core_mac", help="MAC address of the 10 GbE core", default="02:2E:46:E0:64:A1"
+)
+parser.add_argument(
+    "--dest_mac",
+    help="MAC address of the UDP payload destination (ARP)",
+    default="98:03:9b:3d:8b:7a",
+)
+parser.add_argument(
+    "--adc_name", help="Simulink block name for the ADC", default="snap_adc"
+)
+parser.add_argument(
+    "--core_name", help="Simulink block name for the 10 GbE core", default="gbe0"
+)
+parser.add_argument(
+    "--sample_rate", help="ADC sample rate in MSps", default=500, type=int
+)
+parser.add_argument("--channels", help="ADC channels", default=2, type=int)
 
 
 class OutputPair(Enum):
@@ -131,7 +169,6 @@ def setup_tengbe(
     assert client.read_uint("gbe0_txofctr") == 0, "Overflow detected in the 10 GbE Core"
 
 
-@CLI.command()
 def program(filename: str, ip: str, upload_port: int = 3000):
     program_snap(filename, ip, upload_port)
 
@@ -155,7 +192,6 @@ class InterceptHandler(logging.Handler):
         )
 
 
-@CLI.command()
 def startup(
     # The FPG file
     filename: str,
@@ -210,8 +246,28 @@ def startup(
     pair_select(client, OutputPair._1_2)
     chan_select(client, AdcChan.A, OutChan.A)
     chan_select(client, AdcChan.B, OutChan.B)
-    set_requant_gain(client, 1.0)
+    set_requant_gain(client, 200)
     # Calibrate the ADCs
     setup_adcs(client, adc_name, sample_rate_mhz, channels)
     clk = client.estimate_fpga_clock()
     logger.success(f"Setup complete - FPGA clock at {clk} MHz")
+
+
+# CLI entry point
+def main():
+    args = parser.parse_args()
+    startup(
+        args.filename,
+        args.ip,
+        args.upload_port,
+        args.core_ip,
+        args.dest_ip,
+        args.core_port,
+        args.dest_port,
+        args.core_mac,
+        args.dest_mac,
+        args.adc_name,
+        args.core_name,
+        args.sample_rate,
+        args.channels,
+    )
