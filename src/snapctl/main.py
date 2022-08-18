@@ -10,7 +10,6 @@ from loguru import logger
 from typing import Dict
 from enum import Enum
 import numpy as np
-import matplotlib.pyplot as plt
 import logging
 import time
 import sys
