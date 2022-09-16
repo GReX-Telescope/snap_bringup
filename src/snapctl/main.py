@@ -161,7 +161,7 @@ def setup_tengbe(
     # Wait for the core to boot
     time.sleep(2)
     # Check the link
-    if client.read_int(f"gbe0_linkup") == 1:
+    if client.read_int(f"gbe1_linkup") == 1:
         logger.success("10 GbE link is up")
     # Wait a few cycles to see if anything is overflowing or otherwise erroneous
     time.sleep(1)
