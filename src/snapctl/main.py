@@ -26,13 +26,13 @@ parser.add_argument(
     "--upload_port", help="The katcp FPG upload_port", type=int, default=3000
 )
 parser.add_argument(
-    "--core_ip", help="IP address of the 10 GbE Core", default="192.168.5.20"
+    "--core_ip", help="IP address of the 10 GbE Core", default="192.168.0.20"
 )
 parser.add_argument(
     "--core_port", help="Port of the 10 GbE Core", default=60000, type=int
 )
 parser.add_argument(
-    "--dest_ip", help="IP address of the UDP payload destination", default="192.168.5.1"
+    "--dest_ip", help="IP address of the UDP payload destination", default="192.168.0.1"
 )
 parser.add_argument(
     "--dest_port", help="Port of the UDP payload destination", default=60000, type=int
@@ -43,13 +43,13 @@ parser.add_argument(
 parser.add_argument(
     "--dest_mac",
     help="MAC address of the UDP payload destination (ARP)",
-    default="98:03:9b:3d:8b:7a",
+    default="98:b7:85:a7:ec:78",
 )
 parser.add_argument(
     "--adc_name", help="Simulink block name for the ADC", default="snap_adc"
 )
 parser.add_argument(
-    "--core_name", help="Simulink block name for the 10 GbE core", default="gbe0"
+    "--core_name", help="Simulink block name for the 10 GbE core", default="gbe1"
 )
 parser.add_argument(
     "--sample_rate", help="ADC sample rate in MSps", default=500, type=int
@@ -165,7 +165,7 @@ def setup_tengbe(
         logger.success("10 GbE link is up")
     # Wait a few cycles to see if anything is overflowing or otherwise erroneous
     time.sleep(1)
-    assert client.read_uint("gbe0_txofctr") == 0, "Overflow detected in the 10 GbE Core"
+    assert client.read_uint("gbe1_txofctr") == 0, "Overflow detected in the 10 GbE Core"
 
 
 def program(filename: str, ip: str, upload_port: int = 3000):
@@ -198,17 +198,17 @@ def startup(
     ip: str,
     # Many of these are set by the gateware and don't warrant changing
     upload_port: int = 3000,
-    core_ip: str = "192.168.5.20",
-    dest_ip: str = "192.168.5.1",
+    core_ip: str = "192.168.0.20",
+    dest_ip: str = "192.168.0.1",
     # I don't know what happens if these are different
     core_port: int = 60000,
     dest_port: int = 60000,
     # Core is arbitrary, dest *should* match the NIC of the server
     core_mac: str = "02:2E:46:E0:64:A1",
-    dest_mac: str = "98:03:9b:3d:8b:7a",
+    dest_mac: str = "98:b7:85:a7:ec:78",
     # Set by the names of the simulink block
     adc_name: str = "snap_adc",
-    core_name: str = "gbe0",
+    core_name: str = "gbe1",
     # This requires a 500 MHz clock in the sample input
     sample_rate_mhz: int = 500,
     channels: int = 2,
