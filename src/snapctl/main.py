@@ -130,7 +130,7 @@ def setup_tengbe(
     dest_mac: str,
 ):
     assert (
-        client.gbes != None
+        client.gbes is not None
     ), "The connected client doesn't seem to have any GbE cores"
     # For some (casper) reason, client.gbes isn't a normal dict
     try:
@@ -157,7 +157,7 @@ def setup_tengbe(
     # Wait for the core to boot
     time.sleep(2)
     # Check the link
-    if client.read_int(f"gbe1_linkup") == 1:
+    if client.read_int("gbe1_linkup") == 1:
         logger.success("10 GbE link is up")
     # Wait a few cycles to see if anything is overflowing or otherwise erroneous
     time.sleep(1)
