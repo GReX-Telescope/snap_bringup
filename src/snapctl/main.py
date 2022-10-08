@@ -4,16 +4,12 @@ from casperfpga import CasperFpga
 from casperfpga.tengbe import TenGbe
 from casperfpga.network import IpAddress, Mac
 from casperfpga.snapadc import SnapAdc
-from casperfpga.snap import Snap
-from casperfpga.adc import HMCAD1511
 from loguru import logger
 from typing import Dict
 from enum import Enum
-import numpy as np
 import logging
 import time
 import sys
-import struct
 import argparse
 
 parser = argparse.ArgumentParser(
@@ -172,6 +168,11 @@ def program(filename: str, ip: str, upload_port: int = 3000):
     program_snap(filename, ip, upload_port)
 
 
+def arm_and_trig(client: CasperFpga):
+    client.write_int("arm", 1)
+    client.write_int("pps_trig", 1)
+
+
 class InterceptHandler(logging.Handler):
     def emit(self, record):
         # Get corresponding Loguru level if it exists.
@@ -250,6 +251,9 @@ def startup(
     setup_adcs(client, adc_name, sample_rate_mhz, channels)
     clk = client.estimate_fpga_clock()
     logger.success(f"Setup complete - FPGA clock at {clk} MHz")
+    # Arm and trigger
+    # TODO: This should be done by the packet capture to deal with timing
+    arm_and_trig(client)
 
 
 # CLI entry point
