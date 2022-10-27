@@ -189,9 +189,6 @@ def setup_tengbe(
     # Check the link
     if client.read_int("gbe1_linkup") == 1:
         logger.success("10 GbE link is up")
-    # Wait a few cycles to see if anything is overflowing or otherwise erroneous
-    time.sleep(1)
-    assert client.read_uint("gbe1_txofctr") == 0, "Overflow detected in the 10 GbE Core"
 
 
 def arm_and_trig(client: CasperFpga):
