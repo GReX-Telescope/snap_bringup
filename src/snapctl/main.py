@@ -19,9 +19,6 @@ parser = argparse.ArgumentParser(
 parser.add_argument("filename", help="The FPG file to program")
 parser.add_argument("ip", help="The IP address of the Pi (or proxy)")
 parser.add_argument(
-    "--upload_port", help="The katcp FPG upload_port", type=int, default=3000
-)
-parser.add_argument(
     "--core_ip", help="IP address of the 10 GbE Core", default="192.168.0.20"
 )
 parser.add_argument(
@@ -47,38 +44,26 @@ parser.add_argument(
 parser.add_argument(
     "--core_name", help="Simulink block name for the 10 GbE core", default="gbe1"
 )
-parser.add_argument(
-    "--sample_rate", help="ADC sample rate in MSps", default=500, type=int
-)
 parser.add_argument("--channels", help="ADC channels", default=2, type=int)
 
 
-class OutputPair(Enum):
-    _1_2 = 0
-    _1_3 = 1
-    _1_4 = 2
-    _2_3 = 3
-    _2_4 = 4
-    _3_4 = 5
+class AdcPair(Enum):
+    A1_2 = 0
+    A3_4 = 1
+    B1_2 = 2
+    B3_4 = 3
+    C1_2 = 4
+    C3_4 = 5
 
 
-class AdcChan(Enum):
-    A = 0
-    B = 1
-    C = 2
+def chan_1_select(client: CasperFpga, adc_pair: AdcPair):
+    """Sets the ADC input pair selected for the first channel (A)"""
+    client.write_int(f"ch_1_sel", adc_pair.value)
 
 
-class OutChan(Enum):
-    A = 1
-    B = 2
-
-
-def pair_select(client: CasperFpga, pair: OutputPair):
-    client.write_int("pair_sel", pair.value)
-
-
-def chan_select(client: CasperFpga, adc_chan: AdcChan, out_chan: OutChan):
-    client.write_int(f"ch_{out_chan.value}_sel", adc_chan.value)
+def chan_2_select(client: CasperFpga, adc_pair: AdcPair):
+    """Sets the ADC input pair selected for the second channel (B)"""
+    client.write_int(f"ch_2_sel", adc_pair.value)
 
 
 def set_requant_gain(client: CasperFpga, gain: float):
@@ -89,33 +74,78 @@ def set_requant_gain(client: CasperFpga, gain: float):
     client.write_int("requant_gain", int(round(gain * 32)))
 
 
-def program_snap(filename: str, ip: str, upload_port: int) -> CasperFpga:
+def program_snap(filename: str, ip: str) -> CasperFpga:
     client = CasperFpga(ip)
     logger.info("SNAP connected")
-    client.upload_to_ram_and_program(filename, port=upload_port)
+    client.upload_to_ram_and_program(filename)
     logger.success("SNAP programmed")
+    # We're using TAPCP, so we still need to tell casperfpga about the registers
+    client.get_system_information(filename)
     return client
 
 
-def setup_adcs(client: CasperFpga, adc_name: str, sample_rate_mhz: int, channels: int):
+def setup_adcs(client: CasperFpga, adc_name: str, channels: int):
     assert (
         client.adc_devices is not None
     ), "The connected client doesn't seem to have any ADCs"
     # Type hint for adc_devices
     devices: Dict[str, SnapAdc] = client.adc_devices
     assert adc_name in devices, f"{adc_name} is not an ADC we know about"
+    adc = devices[adc_name]
+    assert adc.adc is not None
     # For some reason this is getting set wrong.
     # It should be None because we are using an external clock
-    devices[adc_name].lmx = None
-    # Run init (~20 seconds)
-    # This need to go around a few times, let's say at most 3
-    for _ in range(3):
-        if devices[adc_name].init(sample_rate_mhz, channels):
-            break
-    adc_wrapper = devices[adc_name]
-    assert adc_wrapper.adc is not None
+    adc.lmx = None
+    # Setup all the clocks
+    # TODO: This should be handled in CasperFPGA
+    adc.clksw.setSwitch("b")
+    time.sleep(0.5)
+    adc.logger.debug("Reseting adc_unit")
+    # Clear any dangling ADC state
+    adc.reset()
+    # Select all ADCs
+    adc.selectADC()
+    # Start setting up the clocks
+    adc.logger.debug("Initialising ADCs")
+    adc.adc.init()
+    # SNAP only uses one of the 3 ADC chips to provide clocks, so turn the others
+    # to the lowest drive strength possible and terminate them
+    adc.selectADC([1, 2])  # Talk to the 2nd and 3rd ADCs
+    # Please refer to HMCAD1511 datasheet for more details
+    # LCLK Termination
+    rid, mask = adc.adc._getMask("en_lvds_term")
+    val = adc.adc._set(
+        0x0, 0b1, mask
+    )  # Enable termination. Default terminations (i.e. none)
+    rid, mask = adc.adc._getMask("term_lclk")
+    val = adc.adc._set(val, 0b011, mask)  # 94 ohm
+    # Frame CLK termination
+    rid, mask = adc.adc._getMask("term_frame")
+    val = adc.adc._set(val, 0b011, mask)  # 94 ohm
+    adc.adc.write(val, rid)
+    # LCLK Drive Strength
+    rid, mask = adc.adc._getMask("ilvds_lclk")
+    val = adc.adc._set(0x0, 0b011, mask)  # 0.5 mA. Default Data drive strength
+    # Frame CLK Drive Strength
+    rid, mask = adc.adc._getMask("ilvds_frame")
+    val = adc.adc._set(val, 0b011, mask)  # 0.5 mA
+    adc.adc.write(val, rid)
+    # Select all ADCs and continue initialization
+    adc.selectADC()
+    # Set the operating mode
+    adc.adc.setOperatingMode(channels, 1, False)
+
+    adc.setDemux(numChannel=channels)
+
+    adc.logger.debug("Check if MMCM locked")
+    if not adc.getWord("ADC16_LOCKED"):
+        adc.logger.error("MMCM not locked.")
+        return False
+
+    time.sleep(0.5)
+
     # Set the ADC inputs correctly
-    adc_wrapper.adc.selectInput([1, 1, 1, 1])
+    adc.adc.selectInput([1, 1, 1, 1])
     logger.info("ADCs configured")
 
 
@@ -164,13 +194,12 @@ def setup_tengbe(
     assert client.read_uint("gbe1_txofctr") == 0, "Overflow detected in the 10 GbE Core"
 
 
-def program(filename: str, ip: str, upload_port: int = 3000):
-    program_snap(filename, ip, upload_port)
-
-
 def arm_and_trig(client: CasperFpga):
-    client.write_int("arm", 1)
+    # Clear the master reset and manually send a PPS pulse
+    client.write_int("master_rst", 1)
+    client.write_int("master_rst", 0)
     client.write_int("pps_trig", 1)
+    client.write_int("pps_trig", 0)
 
 
 class InterceptHandler(logging.Handler):
@@ -198,7 +227,6 @@ def startup(
     # The ip of the Pi (or proxy to the Pi)
     ip: str,
     # Many of these are set by the gateware and don't warrant changing
-    upload_port: int = 3000,
     core_ip: str = "192.168.0.20",
     dest_ip: str = "192.168.0.1",
     # I don't know what happens if these are different
@@ -210,8 +238,6 @@ def startup(
     # Set by the names of the simulink block
     adc_name: str = "snap_adc",
     core_name: str = "gbe1",
-    # This requires a 500 MHz clock in the sample input
-    sample_rate_mhz: int = 500,
     channels: int = 2,
 ):
     # Setup logging
@@ -229,7 +255,7 @@ def startup(
     logger.disable("PIL")
     logger.disable("tftpy")
     # Program the SNAP
-    client = program_snap(filename, ip, upload_port)
+    client = program_snap(filename, ip)
     # Startup networking
     setup_tengbe(
         client,
@@ -243,12 +269,11 @@ def startup(
     )
     # Setup some constants
     client.write_int("fft_shift", 4095)
-    pair_select(client, OutputPair._1_2)
-    chan_select(client, AdcChan.A, OutChan.A)
-    chan_select(client, AdcChan.B, OutChan.B)
+    chan_1_select(client, AdcPair.A1_2)
+    chan_2_select(client, AdcPair.B1_2)
     set_requant_gain(client, 200)
     # Calibrate the ADCs
-    setup_adcs(client, adc_name, sample_rate_mhz, channels)
+    setup_adcs(client, adc_name, channels)
     clk = client.estimate_fpga_clock()
     logger.success(f"Setup complete - FPGA clock at {clk} MHz")
     # Arm and trigger
@@ -262,7 +287,6 @@ def main():
     startup(
         args.filename,
         args.ip,
-        args.upload_port,
         args.core_ip,
         args.dest_ip,
         args.core_port,
@@ -271,6 +295,5 @@ def main():
         args.dest_mac,
         args.adc_name,
         args.core_name,
-        args.sample_rate,
         args.channels,
     )
