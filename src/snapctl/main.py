@@ -268,14 +268,11 @@ def startup(
     client.write_int("fft_shift", 4095)
     chan_1_select(client, AdcPair.A1_2)
     chan_2_select(client, AdcPair.B1_2)
-    set_requant_gain(client, 200)
+    set_requant_gain(client, 1)
     # Calibrate the ADCs
     setup_adcs(client, adc_name, channels)
     clk = client.estimate_fpga_clock()
     logger.success(f"Setup complete - FPGA clock at {clk} MHz")
-    # Arm and trigger
-    # TODO: This should be done by the packet capture to deal with timing
-    arm_and_trig(client)
 
 
 # CLI entry point
