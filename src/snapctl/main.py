@@ -66,10 +66,10 @@ def chan_2_select(client: CasperFpga, adc_pair: AdcPair):
     client.write_int(f"ch_2_sel", adc_pair.value)
 
 
-def set_requant_gain(client: CasperFpga, gain: float):
+def set_requant_gain(client: CasperFpga, gain: int):
     assert (
         0 < gain < 2047
-    ), "Gain is 16 bit fixed point, unsigned, with a binary point at 5, so gain must be between 0 and 2047"
+    ), "Gain is 11 bit unsigned integer, so gain must be between 0 and 2047"
     # Convert to fixed point
     client.write_int("requant_gain", int(round(gain * 32)))
 
@@ -189,14 +189,6 @@ def setup_tengbe(
     # Check the link
     if client.read_int("gbe1_linkup") == 1:
         logger.success("10 GbE link is up")
-
-
-def arm_and_trig(client: CasperFpga):
-    # Clear the master reset and manually send a PPS pulse
-    client.write_int("master_rst", 1)
-    client.write_int("master_rst", 0)
-    client.write_int("pps_trig", 1)
-    client.write_int("pps_trig", 0)
 
 
 class InterceptHandler(logging.Handler):
