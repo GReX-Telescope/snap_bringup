@@ -150,6 +150,9 @@ def setup_adcs(client: CasperFpga, adc_name: str, channels: int):
 
     # Calibration - stolen from HERA because it was mysteriously removed from casper_fpga
 
+    adc._retry_cnt = 0
+    adc.working_taps = {}
+
     # Calibrate in full interleave
     adc.setDemux(numChannel=1)
 
