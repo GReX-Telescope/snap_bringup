@@ -461,7 +461,7 @@ class SNAPADC(object):
         elif laneSel not in self.laneList:
             raise ValueError("Invalid parameter")
 
-        if not np.issubdtype(tap, np.integer):
+        if not isinstance(tap, (int, np.integer)):
             raise ValueError("Invalid parameter")
 
         strl = ",".join([str(c) for c in laneSel])
@@ -630,7 +630,7 @@ class SNAPADC(object):
             # pattern1 = 0b111111000000 when self.RESOLUTION is 12
             pattern1 = ((2 ** (self.RESOLUTION / 2)) - 1) << (self.RESOLUTION / 2)
             pattern1 = self._signed(pattern1, self.RESOLUTION)
-        elif isinstance(pattern1, int) and pattern2 == None:
+        elif isinstance(pattern1, (int, np.integer)) and pattern2 == None:
             # single pattern mode
 
             if type(self.adc) is HMCAD1520:
@@ -642,7 +642,9 @@ class SNAPADC(object):
 
             self.adc.test("single_custom_pat", reg_p1)
             pattern1 = self._signed(pattern1, self.RESOLUTION)
-        elif isinstance(pattern1, int) and isinstance(pattern2, int):
+        elif isinstance(pattern1, (int, np.integer)) and isinstance(
+            pattern2, (int, np.integer)
+        ):
             # dual pattern mode
 
             if type(self.adc) is HMCAD1520:
