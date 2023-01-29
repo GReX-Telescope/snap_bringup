@@ -114,6 +114,8 @@ def calibrate_adc(adc: snapadc.SNAPADC, numChannel=int) -> bool:
 
     # Finally place ADC in "correct" mode
     adc.setDemux(numChannel=numChannel)
+    # And set the gain to a "reasonable" value
+    adc.set_gain(4)
     return True
 
 

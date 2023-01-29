@@ -84,6 +84,36 @@ class SNAPADC(object):
         self.p1 = ((pats[0] & mask) << ofst) + (pats[3] & mask)
         self.p2 = ((pats[1] & mask) << ofst) + (pats[2] & mask)
 
+    def set_gain(self, gain):
+        """
+        Set the coarse gain of the ADC. Allowed values
+        are 1, 1.25, 2, 2.5, 4, 5, 8, 10, 12.5, 16, 20, 25, 32, 50.
+        """
+        gain_map = {
+            1: 0b0000,
+            1.25: 0b0001,
+            2: 0b0010,
+            2.5: 0b0011,
+            4: 0b0100,
+            5: 0b0101,
+            8: 0b0110,
+            10: 0b0111,
+            12.5: 0b1000,
+            16: 0b1001,
+            20: 0b1010,
+            25: 0b1011,
+            32: 0b1100,
+            50: 0b1101,
+        }
+
+        if gain not in gain_map.keys():
+            raise ValueError(
+                "Gain %f is not allowed! Only gains %s are allowed"
+                % (gain, gain_map.keys())
+            )
+
+        self.adc.write((gain_map[gain] << 4) + gain_map[gain], 0x2B)
+
     def init(self, samplingRate=250, numChannel=4):
         """Get SNAP ADCs into working condition
 
