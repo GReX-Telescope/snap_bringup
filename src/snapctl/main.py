@@ -192,6 +192,8 @@ def startup(
     logger.disable("tftpy")
     # Program the SNAP
     client = program_snap(filename, ip)
+    # Calibrate the ADCs
+    setup_adcs(client, adc_name, channels)
     # Startup networking
     setup_tengbe(
         client,
@@ -208,8 +210,6 @@ def startup(
     chan_1_select(client, AdcPair.A1_2)
     chan_2_select(client, AdcPair.B1_2)
     set_requant_gain(client, 1)
-    # Calibrate the ADCs
-    setup_adcs(client, adc_name, channels)
     clk = client.estimate_fpga_clock()
     logger.success(f"Setup complete - FPGA clock at {clk} MHz")
 
