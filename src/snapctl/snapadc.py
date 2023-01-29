@@ -461,7 +461,7 @@ class SNAPADC(object):
         elif laneSel not in self.laneList:
             raise ValueError("Invalid parameter")
 
-        if not isinstance(tap, np.integer):
+        if not np.issubdtype(tap, np.integer):
             raise ValueError("Invalid parameter")
 
         strl = ",".join([str(c) for c in laneSel])
