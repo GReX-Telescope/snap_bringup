@@ -611,7 +611,6 @@ class SNAPADC(object):
         elif taps in self.adcList:
             taps = [taps]
         if not isinstance(taps, list) and taps != None:
-            print(taps)
             raise ValueError("Invalid parameter")
         elif isinstance(taps, list) and any(cs not in range(32) for cs in taps):
             raise ValueError("Invalid parameter")
@@ -814,7 +813,7 @@ class SNAPADC(object):
             stds = self.testPatterns(taps=True)  # Sweep tap settings and get std
             for adc in self.adcList:
                 for lane in self.laneList:
-                    vals = np.array(stds[adc].values())[:, lane]
+                    vals = np.array(list(stds[adc].values()))[:, lane]
                     t = self.decideDelay(vals)  # Find a proper tap setting
                     if not t:
                         self.logger.error(
@@ -828,7 +827,7 @@ class SNAPADC(object):
             # decide chip-wise delay tap under single pattern test mode
             stds = self.testPatterns(taps=True)  # Sweep tap settings and get std
             for adc in self.adcList:
-                vals = np.array(stds[adc].values())
+                vals = np.array(list(stds[adc].values()))
                 t = self.decideDelay(vals)  # Find a proper tap setting
                 if not t:
                     self.logger.error("ADC{0} delay decision failed".format(adc))
@@ -844,7 +843,7 @@ class SNAPADC(object):
 
             for adc in self.adcList:
                 for lane in self.laneList:
-                    vals = np.array(errs[adc].values())[:, lane]
+                    vals = np.array(list(errs[adc].values()))[:, lane]
                     t = self.decideDelay(vals)  # Find a proper tap setting
                     if not t:
                         self.logger.error(
@@ -857,7 +856,7 @@ class SNAPADC(object):
 
     def isLineClockAligned(self):
         errs = self.testPatterns(mode="std", pattern1=self.p1, pattern2=self.p2)
-        if np.all(np.array([adc.values() for adc in errs.values()]) == 0):
+        if np.all(np.array([list(adc.values()) for adc in errs.values()]) == 0):
             return True
         else:
             self.logger.debug("Line clock NOT aligned.\n{0}".format(str(errs)))
@@ -889,7 +888,7 @@ class SNAPADC(object):
 
     def rampTest(self):
         errs = self.testPatterns(mode="ramp")
-        return np.all(np.array([adc.values() for adc in errs.values()]) == 0)
+        return np.all(np.array([list(adc.values()) for adc in errs.values()]) == 0)
 
     def isLaneBonded(self, bondAllAdcs=False):
         """
