@@ -137,7 +137,7 @@ def setup_adcs(client: CasperFpga, adc_name: str, channels: int):
 
     # ADC init/lmx select messes with FPGA clock, so reprogram
     adc.logger.debug("Reprogramming the FPGA for ADCs")
-    adc.host.transport.prog_user_image()
+    client.transport.prog_user_image()
     adc.selectADC()
     adc.logger.debug("Reprogrammed")
 
