@@ -611,6 +611,7 @@ class SNAPADC(object):
         elif taps in self.adcList:
             taps = [taps]
         if not isinstance(taps, list) and taps != None:
+            print(taps)
             raise ValueError("Invalid parameter")
         elif isinstance(taps, list) and any(cs not in range(32) for cs in taps):
             raise ValueError("Invalid parameter")
