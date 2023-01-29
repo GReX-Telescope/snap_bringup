@@ -194,36 +194,6 @@ class SNAPADC(object):
 
         time.sleep(0.5)
 
-        self.setDemux(numChannel=1)  # calibrate in full interleave mode
-
-        self.logger.debug("Check if MMCM locked")
-        if not self.getWord("ADC16_LOCKED"):
-            self.logger.error("MMCM not locked.")
-            return False
-
-        time.sleep(0.5)
-
-        self.logger.debug("Align line clock")
-        if not self.alignLineClock():
-            self.logger.error("Line clock alignment failed!")
-            return False
-
-        self.logger.debug("Align frame clock")
-        if not self.alignFrameClock():
-            self.logger.error("Frame clock alignment failed!")
-            return False
-
-        if not self.rampTest():
-            self.logger.warning("ADC failed on ramp test")
-            return False
-
-        if not self.isLaneBonded():
-            self.logger.error("ADC failed Lane Bonding test")
-            return False
-
-        # Finally place ADC in "correct" mode
-        self.setDemux(numChannel=numChannel)
-
         return True
 
     def selectADC(self, chipSel=None):

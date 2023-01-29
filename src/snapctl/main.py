@@ -84,14 +84,47 @@ def program_snap(filename: str, ip: str) -> CasperFpga:
     return client
 
 
+def calibrate_adc(adc: snapadc.SNAPADC, numChannel=int) -> bool:
+    adc.setDemux(numChannel=1)  # calibrate in full interleave mode
+
+    adc.logger.debug("Check if MMCM locked")
+    if not adc.getWord("ADC16_LOCKED"):
+        adc.logger.error("MMCM not locked.")
+        return False
+
+    time.sleep(0.5)
+
+    adc.logger.debug("Align line clock")
+    if not adc.alignLineClock():
+        adc.logger.error("Line clock alignment failed!")
+        return False
+
+    adc.logger.debug("Align frame clock")
+    if not adc.alignFrameClock():
+        adc.logger.error("Frame clock alignment failed!")
+        return False
+
+    if not adc.rampTest():
+        adc.logger.warning("ADC failed on ramp test")
+        return False
+
+    if not adc.isLaneBonded():
+        adc.logger.error("ADC failed Lane Bonding test")
+        return False
+
+    # Finally place ADC in "correct" mode
+    adc.setDemux(numChannel=numChannel)
+    return True
+
+
 def setup_adcs(client: CasperFpga, adc_name: str, channels: int):
     # Build ADC object using HERA's ADC code
     adc = snapadc.SNAPADC(client)
+    adc.init(250, 2)
     calibrated = False
     while not calibrated:
-        calibrated = adc.init(250, 2)
+        calibrated = calibrate_adc(adc, channels)
     # And finish up
-    adc.setDemux(numChannel=channels)
     adc.adc.selectInput([1, 1, 1, 1])
     logger.success("ADCs configured")
 
