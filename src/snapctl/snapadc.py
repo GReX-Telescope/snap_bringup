@@ -39,7 +39,7 @@ class SNAPADC(object):
     M_WB_W_ISERDES_BITSLIP_CHIP_SEL = 0b11111111 << 8
     M_WB_W_ISERDES_BITSLIP_LANE_SEL = 0b111 << 5
 
-    def __init__(self, interface, ADC="HMCAD1511", ref=None, resolution=8, **kwargs):
+    def __init__(self, interface, ADC="HMCAD1511", ref=None, **kwargs):
         self.RESOLUTION = 8
         self.adc = None
         self.lmx = None
@@ -59,11 +59,6 @@ class SNAPADC(object):
         self.ramList = ["adc16_wb_ram0", "adc16_wb_ram1", "adc16_wb_ram2"]
         self.laneList = [0, 1, 2, 3, 4, 5, 6, 7]
 
-        if resolution not in [8, 12, 14]:
-            self.logger.error("Invalid parameter")
-            raise ValueError("Invalid parameter")
-        else:
-            self.RESOLUTION = resolution
         self.curDelay = np.zeros((len(self.adcList), len(self.laneList)))
 
         if ref is not None:
@@ -84,8 +79,8 @@ class SNAPADC(object):
 
         # test pattern for clock aligning
         pats = [0b10101010, 0b01010101, 0b00000000, 0b11111111]
-        mask = (1 << (self.RESOLUTION / 2)) - 1
-        ofst = self.RESOLUTION / 2
+        mask = (1 << 4) - 1
+        ofst = 4
         self.p1 = ((pats[0] & mask) << ofst) + (pats[3] & mask)
         self.p2 = ((pats[1] & mask) << ofst) + (pats[2] & mask)
 
