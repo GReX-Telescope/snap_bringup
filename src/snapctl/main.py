@@ -87,12 +87,13 @@ def program_snap(filename: str, ip: str) -> CasperFpga:
 def setup_adcs(client: CasperFpga, adc_name: str, channels: int):
     # Build ADC object using HERA's ADC code
     adc = snapadc.SNAPADC(client)
-    adc.init(250, 2)
+    calibrated = False
+    while not calibrated:
+        calibrated = adc.init(250, 2)
     # And finish up
     adc.setDemux(numChannel=channels)
     adc.adc.selectInput([1, 1, 1, 1])
     logger.success("ADCs configured")
-    adc.set_gain(4)
 
 
 def setup_tengbe(
