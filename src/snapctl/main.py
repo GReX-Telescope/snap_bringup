@@ -1,9 +1,9 @@
 """Entry point for command line arguments"""
 
+from . import snapadc
 from casperfpga import CasperFpga
 from casperfpga.tengbe import TenGbe
 from casperfpga.network import IpAddress, Mac
-from casperfpga.snapadc import SnapAdc
 from loguru import logger
 from typing import Dict
 from enum import Enum
@@ -85,98 +85,13 @@ def program_snap(filename: str, ip: str) -> CasperFpga:
 
 
 def setup_adcs(client: CasperFpga, adc_name: str, channels: int):
-    assert (
-        client.adc_devices is not None
-    ), "The connected client doesn't seem to have any ADCs"
-    # Type hint for adc_devices
-    devices: Dict[str, SnapAdc] = client.adc_devices
-    assert adc_name in devices, f"{adc_name} is not an ADC we know about"
-    adc = devices[adc_name]
-    assert adc.adc is not None
-    # For some reason this is getting set wrong.
-    # It should be None because we are using an external clock
-    adc.lmx = None
-    # Setup all the clocks
-    # TODO: This should be handled in CasperFPGA
-    adc.clksw.setSwitch("b")
-    time.sleep(0.5)
-    adc.logger.debug("Reseting adc_unit")
-    # Clear any dangling ADC state
-    adc.reset()
-    # Select all ADCs
-    adc.selectADC()
-    # Start setting up the clocks
-    adc.logger.debug("Initialising ADCs")
-    adc.adc.init()
-    # SNAP only uses one of the 3 ADC chips to provide clocks, so turn the others
-    # to the lowest drive strength possible and terminate them
-    adc.selectADC([1, 2])  # Talk to the 2nd and 3rd ADCs
-    # Please refer to HMCAD1511 datasheet for more details
-    # LCLK Termination
-    rid, mask = adc.adc._getMask("en_lvds_term")
-    val = adc.adc._set(
-        0x0, 0b1, mask
-    )  # Enable termination. Default terminations (i.e. none)
-    rid, mask = adc.adc._getMask("term_lclk")
-    val = adc.adc._set(val, 0b011, mask)  # 94 ohm
-    # Frame CLK termination
-    rid, mask = adc.adc._getMask("term_frame")
-    val = adc.adc._set(val, 0b011, mask)  # 94 ohm
-    adc.adc.write(val, rid)
-    # LCLK Drive Strength
-    rid, mask = adc.adc._getMask("ilvds_lclk")
-    val = adc.adc._set(0x0, 0b011, mask)  # 0.5 mA. Default Data drive strength
-    # Frame CLK Drive Strength
-    rid, mask = adc.adc._getMask("ilvds_frame")
-    val = adc.adc._set(val, 0b011, mask)  # 0.5 mA
-    adc.adc.write(val, rid)
-    # Select all ADCs and continue initialization
-    adc.selectADC()
-    # Set the operating mode
-    adc.adc.setOperatingMode(channels, 1, False)
-
-    # ADC init/lmx select messes with FPGA clock, so reprogram
-    adc.logger.debug("Reprogramming the FPGA for ADCs")
-    client.transport.prog_user_image()
-    adc.selectADC()
-    adc.logger.debug("Reprogrammed")
-
-    # Select the clock source switch again. The reprogramming
-    # seems to lose this information
-    adc.logger.debug("Configuring clock source switch")
-    adc.clksw.setSwitch("b")
-
-    time.sleep(0.5)
-
-    # Calibration - stolen from HERA because it was mysteriously removed from casper_fpga
-
-    adc._retry_cnt = 0
-    adc.working_taps = {}
-
-    # Calibrate in full interleave
-    adc.setDemux(numChannel=1)
-
-    adc.logger.debug("Check if MMCM locked")
-    if not adc.getWord("ADC16_LOCKED"):
-        adc.logger.error("MMCM not locked.")
-        return False
-
-    time.sleep(0.5)
-
-    fails = adc.alignLineClock()
-    if len(fails) > 0:
-        adc.logger.warning("alignLineClock failed on: " + str(fails))
-    fails = adc.alignFrameClock()
-    if len(fails) > 0:
-        adc.logger.warning("alignFrameClock failed on: " + str(fails))
-    fails = adc.rampTest()
-    if len(fails) > 0:
-        adc.logger.warning("rampTest failed on: " + str(fails))
-
+    # Build ADC object using HERA's ADC code
+    adc = snapadc.SNAPADC(client)
+    adc.init(250, 2)
     # And finish up
     adc.setDemux(numChannel=channels)
     adc.adc.selectInput([1, 1, 1, 1])
-    logger.info("ADCs configured")
+    logger.success("ADCs configured")
     adc.set_gain(4)
 
 
