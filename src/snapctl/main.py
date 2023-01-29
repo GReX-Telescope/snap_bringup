@@ -135,7 +135,23 @@ def setup_adcs(client: CasperFpga, adc_name: str, channels: int):
     # Set the operating mode
     adc.adc.setOperatingMode(channels, 1, False)
 
-    adc.setDemux(numChannel=channels)
+    # ADC init/lmx select messes with FPGA clock, so reprogram
+    adc.logger.debug("Reprogramming the FPGA for ADCs")
+    adc.host.transport.prog_user_image()
+    adc.selectADC()
+    adc.logger.debug("Reprogrammed")
+
+    # Select the clock source switch again. The reprogramming
+    # seems to lose this information
+    adc.logger.debug("Configuring clock source switch")
+    adc.clksw.setSwitch("b")
+
+    time.sleep(0.5)
+
+    # Calibration - stolen from HERA because it was mysteriously removed from casper_fpga
+
+    # Calibrate in full interleave
+    adc.setDemux(numChannel=1)
 
     adc.logger.debug("Check if MMCM locked")
     if not adc.getWord("ADC16_LOCKED"):
@@ -144,9 +160,21 @@ def setup_adcs(client: CasperFpga, adc_name: str, channels: int):
 
     time.sleep(0.5)
 
-    # Set the ADC inputs correctly
+    fails = adc.alignLineClock()
+    if len(fails) > 0:
+        adc.logger.warning("alignLineClock failed on: " + str(fails))
+    fails = adc.alignFrameClock()
+    if len(fails) > 0:
+        adc.logger.warning("alignFrameClock failed on: " + str(fails))
+    fails = adc.rampTest()
+    if len(fails) > 0:
+        adc.logger.warning("rampTest failed on: " + str(fails))
+
+    # And finish up
+    adc.setDemux(numChannel=channels)
     adc.adc.selectInput([1, 1, 1, 1])
     logger.info("ADCs configured")
+    adc.set_gain(4)
 
 
 def setup_tengbe(
