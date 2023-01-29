@@ -445,6 +445,7 @@ class SNAPADC(object):
             delay(31, [0,1,2], [0,1,2,3,4,5,6,7])
                         # Set all delay taps (in SNAP 1 case) to 31
         """
+        print(tap)
 
         if chipSel == None:
             chipSel = self.adcList
