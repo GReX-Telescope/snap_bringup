@@ -445,8 +445,6 @@ class SNAPADC(object):
             delay(31, [0,1,2], [0,1,2,3,4,5,6,7])
                         # Set all delay taps (in SNAP 1 case) to 31
         """
-        print(tap)
-
         if chipSel == None:
             chipSel = self.adcList
         elif chipSel in self.adcList:
@@ -464,6 +462,8 @@ class SNAPADC(object):
             raise ValueError("Invalid parameter")
 
         if not isinstance(tap, int):
+            print(tap)
+            print(type(tap))
             raise ValueError("Invalid parameter")
 
         strl = ",".join([str(c) for c in laneSel])
