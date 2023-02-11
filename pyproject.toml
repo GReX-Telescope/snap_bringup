@@ -7,7 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
-casperfpga = { git = "https://github.com/casper-astro/casperfpga", branch = "py38-dev" }
+casperfpga = { git = "https://github.com/GReX-Telescope/casperfpga", branch = "py38-dev" }
 loguru = "^0.6.0"
 
 [tool.poetry.dev-dependencies]
