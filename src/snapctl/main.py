@@ -18,6 +18,7 @@ parser.add_argument(
     "--adc_name", help="Simulink block name for the ADC", default="snap_adc"
 )
 parser.add_argument("--channels", help="ADC channels", default=2, type=int)
+parser.add_argument("--gain", help="ADC gain", default=2.5, type=float)
 
 
 class AdcPair(Enum):
@@ -49,7 +50,7 @@ def program_snap(filename: str, ip: str) -> CasperFpga:
     return client
 
 
-def setup_adcs(client: CasperFpga, adc_name: str, channels: int):
+def setup_adcs(client: CasperFpga, adc_name: str, channels: int, gain: float):
     # init adc and clk
     adc: SnapAdc = client.adcs[adc_name]
     adc.ref = None
@@ -58,7 +59,7 @@ def setup_adcs(client: CasperFpga, adc_name: str, channels: int):
     adc.rampTest(retry=True)
     adc.adc.selectInput([1, 1, 1, 1])
     adc.selectADC()
-    adc.set_gain(4)
+    adc.set_gain(gain)
     logger.success("ADCs configured")
 
 
@@ -89,6 +90,8 @@ def startup(
     # Set by the names of the simulink block
     adc_name: str = "snap_adc",
     channels: int = 2,
+    # Programmable ADC gain
+    gain: float = 2.5,
 ):
     # Setup logging
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
@@ -107,7 +110,7 @@ def startup(
     # Program the SNAP
     client = program_snap(filename, ip)
     # Calibrate the ADCs
-    setup_adcs(client, adc_name, channels)
+    setup_adcs(client, adc_name, channels, gain)
     # Setup some constants
     chan_1_select(client, AdcPair.A1_2)
     chan_2_select(client, AdcPair.B1_2)
@@ -118,9 +121,4 @@ def startup(
 # CLI entry point
 def main():
     args = parser.parse_args()
-    startup(
-        args.filename,
-        args.ip,
-        args.adc_name,
-        args.channels,
-    )
+    startup(args.filename, args.ip, args.adc_name, args.channels, args.gain)
