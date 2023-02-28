@@ -57,7 +57,12 @@ def setup_adcs(client: CasperFpga, adc_name: str, channels: int, gain: float):
     adc.selectADC()
     adc.init(sample_rate=500, numChannel=channels)
     adc.rampTest(retry=True)
-    adc.adc.selectInput([1, 1, 1, 1])
+    # First channel crossbar to 1 and 2 (2 is unused), as in, the input is ADC0
+    adc.selectADC(0)
+    adc.adc.selectInput([1, 1, 2, 2])
+    # Second channel crossbar to 2 and 3 (3 is unused), as in, the input is ADC5
+    adc.selectADC(1)
+    adc.adc.selectInput([2, 2, 3, 3])
     adc.selectADC()
     adc.set_gain(gain)
     logger.success("ADCs configured")
