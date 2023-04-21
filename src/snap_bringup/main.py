@@ -5,7 +5,6 @@ from casperfpga.snapadc import SnapAdc
 from loguru import logger
 from enum import Enum
 import logging
-import time
 import sys
 import argparse
 
