@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "snapctl"
+name = "snap_bringup"
 version = "0.1.0"
 description = "Scripts to startup and control the SNAP board for GReX"
 authors = ["Kiran Shila <me@kiranshila.com>"]
@@ -19,4 +19,4 @@ requires = ["setuptools", "poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-snapctl = "snapctl.main:main"
+snap_bringup = "snap_bringup.main:main"

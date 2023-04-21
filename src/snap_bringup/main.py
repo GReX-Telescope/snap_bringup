@@ -10,7 +10,7 @@ import sys
 import argparse
 
 parser = argparse.ArgumentParser(
-    prog="snapctl", description="SNAP bringup routines for GReX", add_help=True
+    prog="snap_bringup", description="SNAP bringup routines for GReX", add_help=True
 )
 parser.add_argument("filename", help="The FPG file to program")
 parser.add_argument("ip", help="The IP address of the Pi (or proxy)")

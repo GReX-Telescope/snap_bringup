@@ -3,18 +3,18 @@ from setuptools import setup
 
 package_dir = {"": "src"}
 
-packages = ["snapctl"]
+packages = ["snap_bringup"]
 
 package_data = {"": ["*"]}
 
 install_requires = ["casperfpga", "loguru"]
 
-entry_points = {"console_scripts": ["snapctl = snapctl.main:main"]}
+entry_points = {"console_scripts": ["snap_bringup = snap_bringup.main:main"]}
 
 setup_kwargs = {
-    "name": "snapctl",
+    "name": "snap_bringup",
     "version": "0.1.0",
-    "description": "Scripts to startup and control the SNAP board for GReX",
+    "description": "Scripts to startup the SNAP board for GReX",
     "long_description": None,
     "author": "Kiran Shila",
     "author_email": "me@kiranshila.com",
