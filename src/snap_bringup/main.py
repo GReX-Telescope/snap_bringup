@@ -1,6 +1,7 @@
 """Entry point for command line arguments"""
 
 from casperfpga import CasperFpga
+from casperfpga.transport_tapcp import TapcpTransport
 from casperfpga.snapadc import SnapAdc
 from loguru import logger
 from enum import Enum
@@ -17,7 +18,7 @@ parser.add_argument(
     "--adc_name", help="Simulink block name for the ADC", default="snap_adc"
 )
 parser.add_argument("--channels", help="ADC channels", default=2, type=int)
-parser.add_argument("--gain", help="ADC gain", default=2.5, type=float)
+parser.add_argument("--gain", help="ADC gain", default=50, type=float)
 
 
 class AdcPair(Enum):
@@ -40,7 +41,7 @@ def chan_2_select(client: CasperFpga, adc_pair: AdcPair):
 
 
 def program_snap(filename: str, ip: str) -> CasperFpga:
-    client = CasperFpga(ip)
+    client = CasperFpga(ip, transport = TapcpTransport)
     logger.info("SNAP connected")
     client.upload_to_ram_and_program(filename)
     logger.success("SNAP programmed")
@@ -95,7 +96,7 @@ def startup(
     adc_name: str = "snap_adc",
     channels: int = 2,
     # Programmable ADC gain
-    gain: float = 2.5,
+    gain: float = 50,
 ):
     # Setup logging
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
